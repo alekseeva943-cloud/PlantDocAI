@@ -14,6 +14,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [loadingText, setLoadingText] = useState('Анализируем...');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,10 +34,52 @@ export default function App() {
     }
   };
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsProcessing(false);
+      addMessage({
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: 'Запрос отменен пользователем.',
+        type: 'text',
+      });
+    }
+  };
+
+  const createSignal = () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    return controller.signal;
+  };
+
+  const handleError = (error: any, context: string) => {
+    if (error.name === 'AbortError') return;
+    
+    console.error(`[${context}]`, error);
+
+    let friendlyMessage = "Ой! Кажется, у меня завяли листочки от такой сложной задачи. Попробуйте еще раз, пожалуйста. 🌿";
+    
+    if (error.message.includes('Failed to fetch')) {
+      friendlyMessage = "Связь с оранжереей прервалась... Проверьте интернет, а я пока полив проверю. 📡";
+    } else if (error.message.includes('Сбой нейросети')) {
+      friendlyMessage = error.message;
+    }
+
+    addMessage({
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: friendlyMessage,
+      type: 'text',
+    });
+  };
+
   const handleImageSelect = async (file: File) => {
     try {
       setIsProcessing(true);
       setLoadingText('Обрабатываем изображение...');
+      const signal = createSignal();
       
       const imageUrl = URL.createObjectURL(file);
       addMessage({
@@ -48,25 +91,21 @@ export default function App() {
       });
 
       setLoadingText('Проверяем листья на вредителей и болезни...');
-      const response = await plantService.analyzeImage(file);
+      const response = await plantService.analyzeImage(file, signal);
       
       addAssistantMessage(response);
     } catch (error: any) {
-      addMessage({
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Ошибка: ${error.message}`,
-        type: 'text',
-      });
+      handleError(error, 'Ошибка при анализе');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleVoiceSelect = async (blob: Blob) => {
+  const handleVoiceSelect = async (audio: File | Blob) => {
     try {
       setIsProcessing(true);
       setLoadingText('Распознаем ваш голос...');
+      const signal = createSignal();
       
       addMessage({
         id: Date.now().toString(),
@@ -75,7 +114,12 @@ export default function App() {
         type: 'voice',
       });
 
-      const response = await plantService.sendVoiceMessage(blob);
+      const history = messages.slice(-5).map(m => ({ 
+        role: m.role, 
+        content: m.role === 'assistant' ? m.content : m.content 
+      }));
+
+      const response = await plantService.sendVoiceMessage(audio, history, signal);
       
       // Update the user message with transcribed text if available
       if (response.transcribed_text) {
@@ -86,12 +130,7 @@ export default function App() {
 
       addAssistantMessage(response);
     } catch (error: any) {
-      addMessage({
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Ошибка при обработке голоса: ${error.message}`,
-        type: 'text',
-      });
+      handleError(error, 'Ошибка при обработке голоса');
     } finally {
       setIsProcessing(false);
     }
@@ -101,6 +140,7 @@ export default function App() {
     try {
       setIsProcessing(true);
       setLoadingText('Обдумываем ответ...');
+      const signal = createSignal();
       
       addMessage({
         id: Date.now().toString(),
@@ -111,18 +151,13 @@ export default function App() {
 
       const history = messages.slice(-6).map(m => ({ 
         role: m.role, 
-        content: m.role === 'assistant' ? JSON.stringify(m.data) : m.content 
+        content: m.role === 'assistant' ? m.content : m.content 
       }));
 
-      const response = await plantService.sendChatMessage(text, history);
+      const response = await plantService.sendChatMessage(text, history, signal);
       addAssistantMessage(response);
     } catch (error: any) {
-      addMessage({
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Ошибка: ${error.message}`,
-        type: 'text',
-      });
+      handleError(error, 'Ошибка');
     } finally {
       setIsProcessing(false);
     }
@@ -183,7 +218,15 @@ export default function App() {
                     onActionClick={handleSendMessage}
                   />
                 ))}
-                {isProcessing && <LoadingState />}
+                {isProcessing && (
+                  <LoadingState 
+                    type={
+                      messages[messages.length - 1]?.type === 'image' ? 'image' : 
+                      messages[messages.length - 1]?.type === 'voice' ? 'voice' : 'chat'
+                    } 
+                    onCancel={handleCancel}
+                  />
+                )}
                 <div ref={chatEndRef} className="h-4" />
               </div>
             )}
@@ -193,16 +236,34 @@ export default function App() {
 
       {/* Fixed Bottom Panel */}
       <footer className="bg-white/80 backdrop-blur-xl border-t border-brand-accent/10 px-6 py-4 shadow-[0_-10px_20px_-10px_rgba(34,197,94,0.1)]">
-        <div className="max-w-2xl mx-auto space-y-4">
-          <UploadZone 
-            onFileSelect={handleImageSelect} 
-            onVoiceSelect={handleVoiceSelect} 
-            isProcessing={isProcessing} 
-            hasMessages={messages.length > 0} 
-          />
-          <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} />
+        <div className="max-w-3xl mx-auto">
+          {messages.length === 0 ? (
+            <div className="space-y-4">
+              <UploadZone 
+                onFileSelect={handleImageSelect} 
+                onVoiceSelect={handleVoiceSelect} 
+                isProcessing={isProcessing} 
+                hasMessages={false} 
+              />
+              <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} />
+              </div>
+              <div className="h-14">
+                <UploadZone 
+                  onFileSelect={handleImageSelect} 
+                  onVoiceSelect={handleVoiceSelect} 
+                  isProcessing={isProcessing} 
+                  hasMessages={true} 
+                />
+              </div>
+            </div>
+          )}
           
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 mt-4">
             <Info className="w-3 h-3 text-gray-400" />
             <p className="text-[10px] text-gray-400">
               Рекомендации ИИ могут быть неточными.

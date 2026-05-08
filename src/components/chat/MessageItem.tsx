@@ -70,14 +70,6 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
               )}
             </div>
           )}
-
-          {isAssistant && (
-            <div className="mt-3 pt-2 border-t border-gray-50">
-              <p className="text-[10px] text-gray-400 italic">
-                {message.data?.disclaimer || "Рекомендации ИИ могут быть неточными."}
-              </p>
-            </div>
-          )}
         </div>
 
         {isAssistant && message.data?.suggested_actions && message.data.suggested_actions.length > 0 && (

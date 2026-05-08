@@ -48,7 +48,12 @@ router.post('/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Сообщение пустое' });
     }
 
-    const result = await orchestrator.handleChat(message, history);
+    const formattedHistory = (history || []).map((m: any) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
+    }));
+
+    const result = await orchestrator.handleChat(message, formattedHistory);
     res.json(result);
   } catch (error: any) {
     console.error('API /chat error:', error);
@@ -65,9 +70,42 @@ router.post('/voice', upload.single('audio'), async (req: Request, res: Response
       return res.status(400).json({ error: 'Аудио не загружено' });
     }
 
-    const text = await orchestrator.transcribeVoice(file);
-    const result = await orchestrator.handleChat(text);
-    res.json({ ...result, transcribed_text: text });
+    let { history } = req.body;
+    
+    // Parse history if it comes as a JSON string from FormData
+    if (typeof history === 'string') {
+      try {
+        history = JSON.parse(history);
+      } catch (e) {
+        history = [];
+      }
+    }
+
+    try {
+      const text = await orchestrator.transcribeVoice(file);
+      
+      if (!text || text.trim().length === 0) {
+        return res.json({ 
+          summary: "Извините, я не смог расслышать ваше сообщение. Попробуйте сказать чуть громче или четче.",
+          possible_causes: [],
+          recommendations: [],
+          suggested_actions: ["Попробовать еще раз", "Задать вопрос текстом"],
+          disclaimer: "Рекомендации ИИ могут быть неточными.",
+          transcribed_text: ""
+        });
+      }
+      
+      const formattedHistory = (Array.isArray(history) ? history : []).map((m: any) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content
+      }));
+
+      const result = await orchestrator.handleChat(text, formattedHistory);
+      res.json({ ...result, transcribed_text: text });
+    } catch (aiError: any) {
+      console.error('Inner AI /voice error:', aiError);
+      res.status(500).json({ error: `Сбой нейросети: ${aiError.message || 'неизвестная ошибка'}` });
+    }
   } catch (error: any) {
     console.error('API /voice error:', error);
     res.status(500).json({ error: error.message || 'Ошибка обработки голоса' });
