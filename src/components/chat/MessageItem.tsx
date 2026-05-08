@@ -19,11 +19,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
     >
       <div className={`max-w-[85%] sm:max-w-[75%] ${isAssistant ? 'w-full' : ''}`}>
         <div
-          className={`px-5 py-4 rounded-3xl shadow-sm ${
-            isAssistant
+          className={`px-5 py-4 rounded-3xl shadow-sm ${isAssistant
               ? 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
               : 'bg-brand-medium text-white rounded-tr-none shadow-brand-medium/20'
-          }`}
+            }`}
         >
           {message.imageUrl && (
             <img
@@ -47,9 +46,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                         </div>
                         <div className="font-semibold text-brand-dark mb-2">{message.data.plant_name}</div>
                         {message.data.plant_url && (
-                          <a 
-                            href={message.data.plant_url} 
-                            target="_blank" 
+                          <a
+                            href={message.data.plant_url}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[10px] text-brand-medium hover:underline font-bold uppercase"
                           >
@@ -67,9 +66,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                         </div>
                         <div className="font-semibold text-red-700 mb-2">{message.data.disease_name}</div>
                         {message.data.disease_url && (
-                          <a 
-                            href={message.data.disease_url} 
-                            target="_blank" 
+                          <a
+                            href={message.data.disease_url}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-[10px] text-red-400 hover:underline font-bold uppercase"
                           >
@@ -137,7 +136,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                 key={i}
                 whileHover={{ y: -4, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onActionClick?.(action)}
+                onClick={() => {
+                  if (typeof action === 'string' && action.trim()) {
+                    onActionClick?.(action.trim());
+                  }
+                }}
                 className="text-xs bg-white/60 hover:bg-white border border-brand-accent/20 px-4 py-2 rounded-full text-brand-dark transition-all duration-200"
               >
                 {action}
