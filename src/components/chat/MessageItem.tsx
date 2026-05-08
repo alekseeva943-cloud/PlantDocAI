@@ -58,6 +58,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                       </div>
                     </div>
                   )}
+
                   {message.data.disease_name && (
                     <div className="flex flex-col">
                       <div className="p-3 bg-red-50 rounded-xl border border-red-100 flex-1">
@@ -86,6 +87,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                   <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
                     <AlertCircle className="w-3 h-3" /> Анализ причин
                   </h4>
+
                   <ul className="space-y-2">
                     {message.data.possible_causes.map((cause, i) => (
                       <li key={i} className="text-sm flex items-start gap-2 leading-relaxed">
@@ -102,6 +104,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                   <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-dark mb-3">
                     <CheckCircle2 className="w-3 h-3 text-brand-medium" /> План действий
                   </h4>
+
                   <ul className="space-y-2">
                     {message.data.recommendations.map((rec, i) => (
                       <li key={i} className="text-sm flex items-start gap-3 text-gray-700 leading-relaxed">
@@ -120,6 +123,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
                   <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
                     <GraduationCap className="w-3 h-3" /> Экспертный совет
                   </h4>
+
                   <p className="text-sm italic text-gray-600 leading-relaxed">
                     {message.data.detailed_advice}
                   </p>
@@ -129,25 +133,32 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
           )}
         </div>
 
-        {isAssistant && message.data?.suggested_actions && message.data.suggested_actions.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {message.data.suggested_actions.map((action, i) => (
-              <motion.button
-                key={i}
-                whileHover={{ y: -4, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  if (typeof action === 'string' && action.trim()) {
-                    onActionClick?.(action.trim());
-                  }
-                }}
-                className="text-xs bg-white/60 hover:bg-white border border-brand-accent/20 px-4 py-2 rounded-full text-brand-dark transition-all duration-200"
-              >
-                {action}
-              </motion.button>
-            ))}
-          </div>
-        )}
+        {isAssistant &&
+          message.data?.suggested_actions &&
+          Array.isArray(message.data.suggested_actions) &&
+          message.data.suggested_actions.filter(
+            (action) => typeof action === 'string' && action.trim()
+          ).length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {message.data.suggested_actions
+                .filter(
+                  (action) => typeof action === 'string' && action.trim()
+                )
+                .map((action, i) => (
+                  <motion.button
+                    key={i}
+                    whileHover={{ y: -4, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      onActionClick?.(action.trim());
+                    }}
+                    className="text-xs bg-white/60 hover:bg-white border border-brand-accent/20 px-4 py-2 rounded-full text-brand-dark transition-all duration-200"
+                  >
+                    {action}
+                  </motion.button>
+                ))}
+            </div>
+          )}
       </div>
     </motion.div>
   );
