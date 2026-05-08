@@ -74,14 +74,14 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         whileTap={{ scale: 0.95 }}
         onClick={() => fileInputRef.current?.click()}
         disabled={isProcessing || isRecording}
-        className={`flex items-center justify-center gap-2 glass-card border-brand-accent/20 hover:border-brand-medium text-brand-dark font-medium transition-all group h-full ${
+        className={`flex items-center justify-center gap-2 glass-card border border-brand-accent/20 hover:border-brand-medium text-brand-dark font-medium transition-all group h-full ${
           hasMessages ? 'w-14 shrink-0' : 'flex-1'
         }`}
       >
         <div className={`transition-colors ${
           hasMessages ? 'text-brand-medium' : 'bg-brand-medium/10 p-2 rounded-xl text-brand-medium group-hover:bg-brand-medium group-hover:text-white'
         }`}>
-          <Camera className={hasMessages ? 'w-6 h-6' : 'w-5 h-5'} />
+          <Camera className="w-5 h-5" />
         </div>
         {!hasMessages && <span>Фото растения</span>}
       </motion.button>
@@ -91,7 +91,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         whileTap={{ scale: 0.95 }}
         onClick={isRecording ? stopRecording : startRecording}
         disabled={isProcessing}
-        className={`flex items-center justify-center gap-3 glass-card border-brand-accent/20 transition-all h-full ${
+        className={`flex items-center justify-center gap-3 glass-card border border-brand-accent/20 transition-all h-full ${
           isRecording ? 'bg-red-50 border-red-200 text-red-600' : 'hover:border-brand-medium text-brand-dark'
         } ${hasMessages ? 'w-14 shrink-0' : 'flex-1'}`}
       >

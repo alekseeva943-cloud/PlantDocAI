@@ -29,9 +29,7 @@ export default function App() {
   };
 
   const handleClearChat = () => {
-    if (window.confirm('Вы уверены, что хотите очистить историю чата?')) {
-      setMessages([]);
-    }
+    setMessages([]);
   };
 
   const handleCancel = () => {
@@ -179,7 +177,7 @@ export default function App() {
 
       {/* Scrollable Area */}
       <main className="flex-1 overflow-y-auto pt-24 pb-4 px-6 scroll-smooth">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           <AnimatePresence mode="popLayout">
             {messages.length === 0 ? (
               <motion.div
@@ -236,7 +234,7 @@ export default function App() {
 
       {/* Fixed Bottom Panel */}
       <footer className="bg-white/80 backdrop-blur-xl border-t border-brand-accent/10 px-6 py-4 shadow-[0_-10px_20px_-10px_rgba(34,197,94,0.1)]">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           {messages.length === 0 ? (
             <div className="space-y-4">
               <UploadZone 
