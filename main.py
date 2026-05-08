@@ -162,7 +162,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Отправьте мне фото растения, и я проведу диагностику.\n"
         "Или просто напишите свой вопрос об уходе!"
     )
-    await update.message.reply_text(welcome_text)
+    # Постоянные кнопки меню
+    keyboard = [
+        [KeyboardButton("🌱 Новое растение"), KeyboardButton("🗑️ Очистить чат")]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+
+
+async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Имитация очистки чата."""
+    await update.message.reply_text(
+        "🗑️ Контекст сброшен. Теперь я готов обсуждать новое растение!",
+        reply_markup=ReplyKeyboardMarkup([["🌱 Новое растение", "🗑️ Очистить чат"]], resize_keyboard=True)
+    )
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -208,17 +221,24 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     response += f"\n\n⚠️ _{result.get('disclaimer', '')}_"
 
-    keyboard = [[KeyboardButton(q)]
-                for q in result.get('suggested_actions', [])[:5]]
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard, resize_keyboard=True, one_time_keyboard=True)
+    # Динамические кнопки + кнопки управления
+    keyboard = [[KeyboardButton(q)] for q in result.get('suggested_actions', [])[:5]]
+    keyboard.append([KeyboardButton("🌱 Новое растение"), KeyboardButton("🗑️ Очистить чат")])
+    
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=wait_msg.message_id)
     await update.message.reply_text(response, parse_mode='Markdown', reply_markup=reply_markup, disable_web_page_preview=True)
 
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE, provided_text: str = None):
+    user_text = provided_text or update.message.text
+
+    # Обработка сервисных кнопок
+    if user_text == "🌱 Новое растение":
+        return await start(update, context)
+    if user_text == "🗑️ Очистить чат":
+        return await clear_chat(update, context)
     
     wait_msg = await update.message.reply_text(".")
     stop_event = asyncio.Event()
@@ -244,13 +264,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if result.get('detailed_advice'):
         response += f"\n\n🌱 *Дополнительно:* {result['detailed_advice']}"
 
-    keyboard = [[KeyboardButton(q)]
-                for q in result.get('suggested_actions', [])[:5]]
-    reply_markup = ReplyKeyboardMarkup(
-        keyboard, resize_keyboard=True, one_time_keyboard=True)
+    # Динамические кнопки + кнопки управления
+    keyboard = [[KeyboardButton(q)] for q in result.get('suggested_actions', [])[:5]]
+    keyboard.append([KeyboardButton("🌱 Новое растение"), KeyboardButton("🗑️ Очистить чат")])
+    
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
     await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=wait_msg.message_id)
     await update.message.reply_text(response, parse_mode='Markdown', reply_markup=reply_markup)
+
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     voice_file = await update.message.voice.get_file()
@@ -270,10 +292,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await wait_msg.edit_text("❌ Не удалось разобрать аудио. Попробуйте сказать четче.")
         return
 
-    # Подменяем текст сообщения и вызываем обычный обработчик
-    update.message.text = text
     await wait_msg.delete()
-    await handle_message(update, context)
+    # Передаем текст напрямую в обработчик
+    await handle_message(update, context, provided_text=text)
 
 
 if __name__ == '__main__':
@@ -283,6 +304,7 @@ if __name__ == '__main__':
         app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
         app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("clear", clear_chat))
         app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
         app.add_handler(MessageHandler(filters.VOICE, handle_voice))
         app.add_handler(MessageHandler(
