@@ -14,16 +14,16 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 
 # Настройка логирования
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("telegram").setLevel(logging.WARNING)
 
 # Конфигурация из окружения
 load_dotenv()
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-print("OPENAI_API_KEY =", OPENAI_API_KEY)
-print("TELEGRAM_TOKEN =", TELEGRAM_TOKEN)
 
 # Инициализация клиента OpenAI
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
@@ -128,6 +128,34 @@ async def analyze_with_gpt(prompt: str, image_bytes: bytes = None) -> dict:
         return None
 
 
+async def transcribe_audio(audio_bytes: bytes) -> str:
+    """Транскрибирует аудио через OpenAI Whisper."""
+    try:
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = "voice.ogg"
+        transcript = await client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file
+        )
+        return transcript.text
+    except Exception as e:
+        logging.error(f"Whisper Error: {e}")
+        return ""
+
+
+async def update_status_loop(message, base_text: str, stop_event: asyncio.Event):
+    """Анимация точек в сообщении."""
+    dots = ["", ".", "..", "..."]
+    idx = 0
+    while not stop_event.is_set():
+        try:
+            await message.edit_text(f"{base_text}{dots[idx % 4]}")
+            idx += 1
+            await asyncio.sleep(2)
+        except Exception:
+            break
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "🌱 Привет! Я — ваш карманный агроном.\n\n"
@@ -141,9 +169,15 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
     image_bytes = await photo_file.download_as_bytearray()
 
-    wait_msg = await update.message.reply_text("🧐 Обрабатываю информацию...")
+    wait_msg = await update.message.reply_text("🧐 Обрабатываю информацию")
+    stop_event = asyncio.Event()
+    status_task = asyncio.create_task(update_status_loop(wait_msg, "🧐 Обрабатываю информацию", stop_event))
 
-    result = await analyze_with_gpt(PLANT_ANALYSIS_PROMPT, image_bytes)
+    try:
+        result = await analyze_with_gpt(PLANT_ANALYSIS_PROMPT, image_bytes)
+    finally:
+        stop_event.set()
+        await status_task
 
     if not result:
         await wait_msg.edit_text("❌ Извините, произошла ошибка. Проверьте настройки или попробуйте позже.")
@@ -185,10 +219,17 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    wait_msg = await update.message.reply_text("...")
+    
+    wait_msg = await update.message.reply_text(".")
+    stop_event = asyncio.Event()
+    status_task = asyncio.create_task(update_status_loop(wait_msg, ".", stop_event))
 
-    prompt = f"{CHAT_PROMPT}\nВопрос пользователя: {user_text}"
-    result = await analyze_with_gpt(prompt)
+    try:
+        prompt = f"{CHAT_PROMPT}\nВопрос пользователя: {user_text}"
+        result = await analyze_with_gpt(prompt)
+    finally:
+        stop_event.set()
+        await status_task
 
     if not result:
         await wait_msg.edit_text("🤔 Хм, возникли проблемы со связью. Попробуйте позже.")
@@ -211,6 +252,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=wait_msg.message_id)
     await update.message.reply_text(response, parse_mode='Markdown', reply_markup=reply_markup)
 
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    voice_file = await update.message.voice.get_file()
+    voice_bytes = await voice_file.download_as_bytearray()
+
+    wait_msg = await update.message.reply_text("🎤 Слушаю")
+    stop_event = asyncio.Event()
+    status_task = asyncio.create_task(update_status_loop(wait_msg, "🎤 Слушаю", stop_event))
+
+    try:
+        text = await transcribe_audio(voice_bytes)
+    finally:
+        stop_event.set()
+        await status_task
+
+    if not text:
+        await wait_msg.edit_text("❌ Не удалось разобрать аудио. Попробуйте сказать четче.")
+        return
+
+    # Подменяем текст сообщения и вызываем обычный обработчик
+    update.message.text = text
+    await wait_msg.delete()
+    await handle_message(update, context)
+
+
 if __name__ == '__main__':
     if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
         print("Ошибка: Проверьте TELEGRAM_BOT_TOKEN и OPENAI_API_KEY в .env")
@@ -219,6 +284,7 @@ if __name__ == '__main__':
 
         app.add_handler(CommandHandler("start", start))
         app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+        app.add_handler(MessageHandler(filters.VOICE, handle_voice))
         app.add_handler(MessageHandler(
             filters.TEXT & (~filters.COMMAND), handle_message))
 
