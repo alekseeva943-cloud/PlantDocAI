@@ -54,11 +54,11 @@ export default function App() {
 
   const handleError = (error: any, context: string) => {
     if (error.name === 'AbortError') return;
-    
+
     console.error(`[${context}]`, error);
 
     let friendlyMessage = "Ой! Кажется, у меня завяли листочки от такой сложной задачи. Попробуйте еще раз, пожалуйста. 🌿";
-    
+
     if (error.message.includes('Failed to fetch')) {
       friendlyMessage = "Связь с оранжереей прервалась... Проверьте интернет, а я пока полив проверю. 📡";
     } else if (error.message.includes('Сбой нейросети')) {
@@ -78,7 +78,7 @@ export default function App() {
       setIsProcessing(true);
       setLoadingText('Обрабатываем изображение...');
       const signal = createSignal();
-      
+
       const imageUrl = URL.createObjectURL(file);
       addMessage({
         id: Date.now().toString(),
@@ -90,7 +90,7 @@ export default function App() {
 
       setLoadingText('Проверяем листья на вредителей и болезни...');
       const response = await plantService.analyzeImage(file, signal);
-      
+
       addAssistantMessage(response);
     } catch (error: any) {
       handleError(error, 'Ошибка при анализе');
@@ -104,7 +104,7 @@ export default function App() {
       setIsProcessing(true);
       setLoadingText('Распознаем ваш голос...');
       const signal = createSignal();
-      
+
       addMessage({
         id: Date.now().toString(),
         role: 'user',
@@ -112,16 +112,16 @@ export default function App() {
         type: 'voice',
       });
 
-      const history = messages.slice(-5).map(m => ({ 
-        role: m.role, 
-        content: m.role === 'assistant' ? m.content : m.content 
+      const history = messages.slice(-5).map(m => ({
+        role: m.role,
+        content: m.role === 'assistant' ? m.content : m.content
       }));
 
       const response = await plantService.sendVoiceMessage(audio, history, signal);
-      
+
       // Update the user message with transcribed text if available
       if (response.transcribed_text) {
-        setMessages(prev => prev.map(m => 
+        setMessages(prev => prev.map(m =>
           m.content === '🎤 Голосовой запрос' ? { ...m, content: `🎤 ${response.transcribed_text}` } : m
         ));
       }
@@ -136,10 +136,23 @@ export default function App() {
 
   const handleSendMessage = async (text: string) => {
     try {
+
+      // Очищаем текст от скрытых символов и лишних переносов
+      text = text
+        .replace(/\n/g, ' ')
+        .replace(/\r/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Если после очистки текст пустой — ничего не отправляем
+      if (!text) {
+        return;
+      }
+
       setIsProcessing(true);
       setLoadingText('Обдумываем ответ...');
       const signal = createSignal();
-      
+
       addMessage({
         id: Date.now().toString(),
         role: 'user',
@@ -147,9 +160,9 @@ export default function App() {
         type: 'text',
       });
 
-      const history = messages.slice(-6).map(m => ({ 
-        role: m.role, 
-        content: m.role === 'assistant' ? m.content : m.content 
+      const history = messages.slice(-6).map(m => ({
+        role: m.role,
+        content: m.role === 'assistant' ? m.content : m.content
       }));
 
       const response = await plantService.sendChatMessage(text, history, signal);
@@ -193,35 +206,35 @@ export default function App() {
                 <p className="text-gray-600 max-w-lg mx-auto text-lg mb-10 leading-relaxed">
                   Сделайте фото или задайте вопрос, чтобы узнать, почему ваше растение болеет и как ему помочь.
                 </p>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-12">
-                   {[
-                     { t: "Загрузите фото", i: "1" },
-                     { t: "Получите анализ", i: "2" },
-                     { t: "Следуйте советам", i: "3" }
-                   ].map((item, idx) => (
-                     <div key={idx} className="glass-card p-6 flex flex-col items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">{item.i}</div>
-                        <span className="text-sm font-medium">{item.t}</span>
-                     </div>
-                   ))}
+                  {[
+                    { t: "Загрузите фото", i: "1" },
+                    { t: "Получите анализ", i: "2" },
+                    { t: "Следуйте советам", i: "3" }
+                  ].map((item, idx) => (
+                    <div key={idx} className="glass-card p-6 flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">{item.i}</div>
+                      <span className="text-sm font-medium">{item.t}</span>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             ) : (
               <div className="space-y-6">
                 {messages.map((msg) => (
-                  <MessageItem 
-                    key={msg.id} 
-                    message={msg} 
+                  <MessageItem
+                    key={msg.id}
+                    message={msg}
                     onActionClick={handleSendMessage}
                   />
                 ))}
                 {isProcessing && (
-                  <LoadingState 
+                  <LoadingState
                     type={
-                      messages[messages.length - 1]?.type === 'image' ? 'image' : 
-                      messages[messages.length - 1]?.type === 'voice' ? 'voice' : 'chat'
-                    } 
+                      messages[messages.length - 1]?.type === 'image' ? 'image' :
+                        messages[messages.length - 1]?.type === 'voice' ? 'voice' : 'chat'
+                    }
                     onCancel={handleCancel}
                   />
                 )}
@@ -237,11 +250,11 @@ export default function App() {
         <div className="max-w-2xl mx-auto">
           {messages.length === 0 ? (
             <div className="space-y-4">
-              <UploadZone 
-                onFileSelect={handleImageSelect} 
-                onVoiceSelect={handleVoiceSelect} 
-                isProcessing={isProcessing} 
-                hasMessages={false} 
+              <UploadZone
+                onFileSelect={handleImageSelect}
+                onVoiceSelect={handleVoiceSelect}
+                isProcessing={isProcessing}
+                hasMessages={false}
               />
               <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} />
             </div>
@@ -251,16 +264,16 @@ export default function App() {
                 <ChatInput onSendMessage={handleSendMessage} isProcessing={isProcessing} />
               </div>
               <div className="h-14">
-                <UploadZone 
-                  onFileSelect={handleImageSelect} 
-                  onVoiceSelect={handleVoiceSelect} 
-                  isProcessing={isProcessing} 
-                  hasMessages={true} 
+                <UploadZone
+                  onFileSelect={handleImageSelect}
+                  onVoiceSelect={handleVoiceSelect}
+                  isProcessing={isProcessing}
+                  hasMessages={true}
                 />
               </div>
             </div>
           )}
-          
+
           <div className="flex items-center justify-center gap-2 mt-4">
             <Info className="w-3 h-3 text-gray-400" />
             <p className="text-[10px] text-gray-400">
