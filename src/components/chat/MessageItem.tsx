@@ -133,13 +133,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onActionClick
         {isAssistant && message.data?.suggested_actions && message.data.suggested_actions.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {message.data.suggested_actions.map((action, i) => (
-              <button
+              <motion.button
                 key={i}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => onActionClick?.(action)}
-                className="text-xs bg-white/60 hover:bg-white border border-brand-accent/20 px-4 py-2 rounded-full text-brand-dark transition-colors"
+                className="text-xs bg-white/60 hover:bg-white border border-brand-accent/20 px-4 py-2 rounded-full text-brand-dark transition-all duration-200"
               >
                 {action}
-              </button>
+              </motion.button>
             ))}
           </div>
         )}
