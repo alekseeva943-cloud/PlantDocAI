@@ -1,11 +1,41 @@
-<div align="center">
+# AI Plant Assistant
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Интеллектуальный мультимодальный помощник по уходу за растениями.
 
-  <h1>Built with AI Studio</h2>
+## Возможности
+- 🌿 **Анализ фото**: Загрузите фото растения, и ИИ определит болезни, вредителей или проблемы с поливом.
+- 💬 **Чат в реальном времени**: Задавайте вопросы об уходе и получайте профессиональные советы.
+- 🎙️ **Голосовые сообщения**: Поддержка обработки голоса (Whisper API).
+- 📱 **Mobile-First UI**: Современный минималистичный интерфейс на основе Tailwind CSS и Framer Motion.
+- ⚡ **Structured AI Responses**: Ответы приходят в структурированном виде с практическими рекомендациями.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Артихектура (Clean Architecture)
+- **Frontend**: Vite + React 19 + Tailwind CSS + Framer Motion.
+- **Backend**: Node.js + Express (имитация структуры FastAPI).
+- **AI Orchestrator**: Централизованный узел для управления промптами и обработки ответов OpenAI.
+- **Providers**: Изолированные сервисы для взаимодействия с внешними API.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Установка и запуск
 
-</div>
+1. **Клонируйте репозиторий**
+2. **Настройте переменные окружения**
+   Создайте файл `.env` в корне:
+   ```env
+   OPENAI_API_KEY=ваш_ключ_openai
+   PORT=3000
+   ```
+3. **Установите зависимости**
+   ```bash
+   npm install
+   ```
+4. **Запустите в режиме разработки**
+   ```bash
+   npm run dev
+   ```
+
+## Деплой
+Приложение готово к деплою на Vercel (Frontend) и Render/Railway (Backend). 
+Поддерживается Docker (см. `docker-compose.yml`).
+
+## Дисклеймер
+Рекомендации ИИ могут быть неточными и не заменяют профессиональную ботаническую консультацию.

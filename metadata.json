@@ -1,0 +1,6 @@
+{
+  "name": "AI Plant Assistant",
+  "description": "Интеллектуальный помощник по уходу за растениями с поддержкой анализа фото и голосовых сообщений.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
