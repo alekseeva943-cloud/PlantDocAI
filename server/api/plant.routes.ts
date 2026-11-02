@@ -6,7 +6,7 @@ import { settings } from '../config/settings';
 const router = Router();
 
 const upload = multer({
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 4 * 1024 * 1024 }, // 10MB
 });
 
 let _orchestrator: PlantAIOrchestrator | null = null;
