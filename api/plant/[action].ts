@@ -4,7 +4,7 @@
  * Each /api/plant/:action request is mapped to this function by Vercel.
  */
 import express from 'express';
-import plantRoutes from '../../server/api/plant.routes';
+import plantRoutes from '../../server/api/plant.routes.js';
 
 const app = express();
 app.disable('x-powered-by');

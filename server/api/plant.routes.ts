@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { PlantAIOrchestrator } from '../ai/orchestrator/plant.orchestrator';
-import { settings } from '../config/settings';
+import { PlantAIOrchestrator } from '../ai/orchestrator/plant.orchestrator.js';
+import { settings } from '../config/settings.js';
 
 const router = Router();
 

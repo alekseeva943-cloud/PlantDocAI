@@ -1,5 +1,5 @@
-import { OpenAIProvider } from '../providers/openai.provider';
-import { PLANT_ANALYSIS_PROMPT, CHAT_PROMPT } from '../prompts/plant.prompts';
+import { OpenAIProvider } from '../providers/openai.provider.js';
+import { PLANT_ANALYSIS_PROMPT, CHAT_PROMPT } from '../prompts/plant.prompts.js';
 
 export interface AIResponse {
   summary: string;
